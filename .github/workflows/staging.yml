@@ -1,0 +1,40 @@
+name: Build STAGING Kernel
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    runs-on: ubuntu-20.04
+
+    steps:
+    - name: Fetch sources
+      uses: actions/checkout@v2
+      with:
+        path: sources
+
+    - name: Install dependencies
+      run: |
+       ubuntu_codename=`lsb_release -c | cut -f2`
+       wget https://apt.llvm.org/llvm-snapshot.gpg.key
+       sudo apt-key add llvm-snapshot.gpg.key
+       sudo add-apt-repository "deb http://apt.llvm.org/$ubuntu_codename/ llvm-toolchain-$ubuntu_codename main"
+       sudo apt-get update
+       sudo apt-get install -y clang llvm lld
+       sudo apt-get install -y binutils-aarch64-linux-gnu gcc-aarch64-linux-gnu binutils-arm-linux-gnueabi gcc-arm-linux-gnueabi
+       sudo apt-get install -y libncurses-dev flex bison openssl libssl-dev dkms libelf-dev libudev-dev libpci-dev libiberty-dev autoconf
+
+    - name: Run kernel build script
+      run: ./build_kernel.sh
+      working-directory: ${{ github.workspace }}/sources
+
+    - name: 'Upload artifact: Kernel Configuration (.config)'
+      uses: actions/upload-artifact@v1
+      with:
+        name: .config
+        path: ${{ github.workspace }}/sources/out/.config
+
+    - name: 'Upload artifact: Kernel Image (bzImage)'
+      uses: actions/upload-artifact@v1
+      with:
+        name: bzImage
+        path: ${{ github.workspace }}/sources/out/bzImage
